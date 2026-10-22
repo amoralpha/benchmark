@@ -164,7 +164,12 @@ void RunInThread(const BenchmarkInstance* b, IterationCount iters,
     results.cpu_time_used += timer.cpu_time_used();
     results.real_time_used += timer.real_time_used();
     results.manual_time_used += timer.manual_time_used();
-    results.complexity_n += st.complexity_length_n();
+    if (st.complexity_length_n() >= 0) {
+      if (results.complexity_n < 0) {
+        results.complexity_n = 0;
+      }
+      results.complexity_n += st.complexity_length_n();
+    }
     internal::Increment(&results.counters, st.counters);
   }
   manager->NotifyThreadComplete();
@@ -291,11 +296,12 @@ BenchmarkRunner::BenchmarkRunner(
       min_time(FLAGS_benchmark_dry_run
                    ? 0
                    : ComputeMinTime(b_, parsed_benchtime_flag)),
-      min_warmup_time(FLAGS_benchmark_dry_run
-                          ? 0
-                          : (b.min_warmup_time() > 0.0
-                                 ? b.min_warmup_time()
-                                 : FLAGS_benchmark_min_warmup_time)),
+      min_warmup_time(
+          FLAGS_benchmark_dry_run
+              ? 0
+              : ((!IsZero(b.min_time()) && b.min_warmup_time() > 0.0)
+                     ? b.min_warmup_time()
+                     : FLAGS_benchmark_min_warmup_time)),
       warmup_done(FLAGS_benchmark_dry_run ? true : !(min_warmup_time > 0.0)),
       repeats(FLAGS_benchmark_dry_run
                   ? 1
